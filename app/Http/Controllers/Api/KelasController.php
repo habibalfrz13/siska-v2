@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\KelasResource;
 use App\Models\Kelas;
 use App\Models\Myclass;
+use App\Models\Peserta;
 use App\Models\Transaksi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -173,32 +175,83 @@ class KelasController extends Controller
         try {
             DB::beginTransaction();
 
-            // Create myclass entry
+            // Create myclass entry (same as web)
             $myclass = Myclass::create([
                 'kelas_id' => $id,
                 'user_id' => $user->id,
-                'status' => 'Pending',
+                'status' => 'Tidak Aktif',
             ]);
 
-            // Create transaction
+            // Create participant record (same as web)
+            $peserta = Peserta::create([
+                'user_id' => $user->id,
+                'kelas_id' => $id,
+                'myclass_id' => $myclass->id,
+                'nama_peserta' => $user->name,
+                'judul' => $kelas->judul,
+            ]);
+
+            // Create transaction with myclass_id and peserta_id (same as web)
             $transaksi = Transaksi::create([
                 'user_id' => $user->id,
                 'kelas_id' => $id,
+                'myclass_id' => $myclass->id,
+                'peserta_id' => $peserta->id,
                 'jumlah_pembayaran' => $kelas->harga,
-                'status_pembayaran' => 'pending',
-                'tanggal_transaksi' => now(),
+                'status_pembayaran' => 'Pending',
+                'tanggal_pembayaran' => null,
             ]);
 
+            // Generate Midtrans snap token (same as web)
+            $snapToken = null;
+            try {
+                \Midtrans\Config::$serverKey = config('midtrans.serverKey');
+                \Midtrans\Config::$isProduction = config('midtrans.isProduction', false);
+                \Midtrans\Config::$isSanitized = true;
+                \Midtrans\Config::$is3ds = true;
+
+                $params = [
+                    'transaction_details' => [
+                        'order_id' => 'SISKA-' . $transaksi->id . '-' . time(),
+                        'gross_amount' => (int) $transaksi->jumlah_pembayaran,
+                    ],
+                    'customer_details' => [
+                        'first_name' => $user->name,
+                        'email' => $user->email,
+                    ],
+                ];
+
+                $snapToken = \Midtrans\Snap::getSnapToken($params);
+                $transaksi->snap_token = $snapToken;
+                $transaksi->save();
+            } catch (\Exception $e) {
+                Log::error('Midtrans error (API)', [
+                    'message' => $e->getMessage(),
+                    'transaksi_id' => $transaksi->id,
+                ]);
+                // Continue without snap token - can retry later
+            }
+
             DB::commit();
+
+            Log::info('API Class enrollment created', [
+                'user_id' => $user->id,
+                'kelas_id' => $id,
+                'myclass_id' => $myclass->id,
+                'peserta_id' => $peserta->id,
+                'transaksi_id' => $transaksi->id,
+            ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Pendaftaran kelas berhasil. Silakan lakukan pembayaran.',
                 'data' => [
                     'enrollment_id' => $myclass->id,
+                    'peserta_id' => $peserta->id,
                     'transaction_id' => $transaksi->id,
+                    'snap_token' => $snapToken,
                     'amount' => $kelas->harga,
-                    'status' => 'pending',
+                    'status' => 'Pending',
                 ],
             ], 201);
 

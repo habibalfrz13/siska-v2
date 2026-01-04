@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TransaksiResource;
 use App\Models\Myclass;
+use App\Models\Peserta;
 use App\Models\Transaksi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -203,11 +204,8 @@ class TransaksiController extends Controller
                 'status_pembayaran' => 'Berhasil',
             ]);
 
-            // Activate the class enrollment
-            $myclass = Myclass::where('kelas_id', $transaksi->kelas_id)
-                ->where('user_id', $transaksi->user_id)
-                ->latest()
-                ->first();
+            // Activate the class enrollment using myclass_id directly
+            $myclass = $transaksi->myclass;
 
             if ($myclass) {
                 $myclass->update(['status' => 'Aktif']);
@@ -272,10 +270,11 @@ class TransaksiController extends Controller
                 'status_pembayaran' => 'Gagal',
             ]);
 
-            // Remove class enrollment
-            Myclass::where('kelas_id', $transaksi->kelas_id)
-                ->where('user_id', $transaksi->user_id)
-                ->delete();
+            // Remove class enrollment and participant using myclass_id
+            if ($transaksi->myclass_id) {
+                Peserta::where('myclass_id', $transaksi->myclass_id)->delete();
+                Myclass::where('id', $transaksi->myclass_id)->delete();
+            }
 
             DB::commit();
 

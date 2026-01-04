@@ -25,10 +25,10 @@ Accept: application/json
 |--------|----------|-------------|------|
 | POST | `/auth/register` | Register user baru | ❌ |
 | POST | `/auth/login` | Login dan dapatkan token | ❌ |
-| GET | `/auth/me` | Get user profile | ✅ |
+| GET | `/auth/user` | Get user profile | ✅ |
 | POST | `/auth/logout` | Logout (revoke token) | ✅ |
 | POST | `/auth/logout-all` | Logout semua device | ✅ |
-| POST | `/auth/change-password` | Ganti password | ✅ |
+| PUT | `/auth/password` | Ganti password | ✅ |
 
 ---
 
@@ -38,16 +38,25 @@ Accept: application/json
 |--------|----------|-------------|------|
 | GET | `/kelas` | List semua kelas (dengan filter) | ❌ |
 | GET | `/kelas/{id}` | Detail kelas | ❌ |
-| GET | `/kelas/available/list` | Kelas yang tersedia untuk user | ✅ |
-| POST | `/kelas/{id}/enroll` | Daftar ke kelas | ✅ |
-| GET | `/my-classes` | Kelas yang diikuti user | ✅ |
+| GET | `/kelas/available` | Kelas yang tersedia untuk user | ✅ |
+| POST | `/kelas/{id}/enrollments` | Daftar ke kelas | ✅ |
+| GET | `/users/me/classes` | Kelas yang diikuti user | ✅ |
 
 **Admin Only:**
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/admin/kelas` | Tambah kelas baru |
-| PUT | `/admin/kelas/{id}` | Update kelas |
-| DELETE | `/admin/kelas/{id}` | Hapus kelas |
+| POST | `/kelas` | Tambah kelas baru |
+| PUT | `/kelas/{id}` | Update kelas |
+| DELETE | `/kelas/{id}` | Hapus kelas |
+
+---
+
+### Reference Data
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/kategori` | List semua kategori | ❌ |
+| GET | `/vendors` | List semua vendor | ❌ |
 
 ---
 
@@ -57,15 +66,45 @@ Accept: application/json
 |--------|----------|-------------|------|
 | GET | `/transaksi` | List transaksi user | ✅ |
 | GET | `/transaksi/{id}` | Detail transaksi | ✅ |
-| GET | `/transaksi/pending/{kelasId}` | Cek transaksi pending | ✅ |
-| POST | `/transaksi/{id}/cancel` | Batalkan transaksi | ✅ |
+| PATCH | `/transaksi/{id}/cancel` | Batalkan transaksi | ✅ |
 
 **Admin Only:**
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/admin/transaksi/all` | Semua transaksi |
-| GET | `/admin/transaksi/statistics` | Statistik transaksi |
-| POST | `/admin/transaksi/{id}/confirm` | Konfirmasi pembayaran |
+| GET | `/admin/transaksi` | Semua transaksi |
+| GET | `/admin/statistics` | Statistik transaksi |
+| PATCH | `/transaksi/{id}/confirm` | Konfirmasi pembayaran |
+
+---
+
+### Learning/Course
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/learn/` | List enrolled active classes for learning | ✅ |
+| GET | `/learn/course/{id}` | Detail course dengan modules | ✅ |
+| GET | `/learn/material/{id}` | Konten material spesifik | ✅ |
+| POST | `/learn/material/{id}/complete` | Mark material as completed | ✅ |
+
+---
+
+### Certificates
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/certificates/` | List sertifikat user | ✅ |
+| POST | `/certificates/generate/{kelasId}` | Generate sertifikat | ✅ |
+| GET | `/certificates/{id}` | Detail sertifikat | ✅ |
+| GET | `/auth/certificates/verify/{number}` | Verifikasi sertifikat (publik) | ❌ |
+
+---
+
+### Biodata/Profile
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/biodata/` | Create/update biodata | ✅ |
+| POST | `/biodata/update` | Update biodata dengan foto | ✅ |
 
 ---
 
@@ -177,9 +216,9 @@ GET /api/health
 **Response:**
 ```json
 {
-  "status": "ok",
-  "message": "SISKA API is running",
+  "status": "healthy",
+  "service": "SISKA API",
   "version": "1.0.0",
-  "timestamp": "2026-01-02T23:45:00+07:00"
+  "timestamp": "2026-01-04T15:00:00+07:00"
 }
 ```
